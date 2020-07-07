@@ -23,13 +23,17 @@ WiFiServer server(port);
 // กำหนดข้อมูลเกี่ยวกับ Line
 #define LINE_TOKEN "p5i3cA07rUkisAioIR5knfSaHoYMOIyyIVUjAGGRJ9v" 
 
-SoftwareSerial mySoftwareSerial(10, 11); // RX, TX
+HardwareSerial mySoftwareSerial(1);
+
+//SoftwareSerial mySoftwareSerial(16, 17); // RX, TX ใช้รับส่งข้อมูล (bit) กับ dfplayermini
+
 DFRobotDFPlayerMini myDFPlayer;
 
-void printDetail(uint8_t type, int value);
+void printDetail(uint8_t type, int value); //ฟังก์ชั่น รับ Status ของ dfplayermini
 
 String sentNoti_ledShow(int clientNo); // ฟังก์ชั่น รับข้อมูลว่า Client ตัวไหนส่งมา เพื่อแจ้งเตือนทาง line และ เปิด LED
 
+bool LIGHT_SIGNAL = false; // จะให้แสดงไฟสถานะของกริ่งประตูหรือไม่
 
 //สร้าง stuct ไว้เก็บข้อมูล client โดย มีตัวแปรขาบนบอร์ด และ ข้อความที่จะให้ส่งผ่านไลน์
 struct wifiClient
@@ -47,7 +51,32 @@ wifiClient doorBell[] = {  // ขาของ ESP8266 ที่จะให้�
 
 void setup() {
 
+  mySoftwareSerial.begin(9600, SERIAL_8N1, 16, 17);  // สร้าง Serial สำหรับติดต่อกับ dfPlayer RX, TX 
+
   Serial.begin(115200); 
+
+  Serial.println(F("Initializing DFPlayer ..."));
+
+    if (!myDFPlayer.begin(mySoftwareSerial)) {  //ตรวจสอบกับการเชื่อมต่อกับ dfPlayer 
+      Serial.println("Unable to begin:");
+      Serial.println("1.Please recheck the connection!");
+      Serial.println("2.Please insert the SD card!");
+    while(true);
+  }
+
+  Serial.println("DFPlayer Mini online.");
+
+  myDFPlayer.setTimeOut(500); //Set serial communictaion time out 500ms
+  myDFPlayer.volume(30);
+  myDFPlayer.EQ(DFPLAYER_EQ_NORMAL);
+  myDFPlayer.outputDevice(DFPLAYER_DEVICE_SD);
+
+  Serial.println(myDFPlayer.readState()); //read mp3 state
+  Serial.println(myDFPlayer.readVolume()); //read current volume
+  Serial.println(myDFPlayer.readEQ()); //read EQ setting
+  Serial.println(myDFPlayer.readFileCounts()); //read all file counts in SD card
+
+
 
   // กำหนด Line Token
   LINE.setToken(LINE_TOKEN); 
@@ -128,17 +157,22 @@ void loop() {
 }
 // ************************************************************************************
 
-// ฟังก์ชั่น รับข้อมูลว่า Client ตัวไหนส่งมา เพื่อแจ้งเตือนทาง line และ เปิด LED
+// ฟังก์ชั่น รับข้อมูลว่า Client ตัวไหนส่งมา เพื่อแจ้งเตือนทาง line และ เปิด LED และเล่นเสียง
 String sentNoti_ledShow(int clientNo){
 
   if(clientNo < sizeof(doorBell)/sizeof(doorBell[0])){ //ตรวจสอบ ว่าใส่เลข Cline เกินจำนวนที่มีหรือไม่
+
+    myDFPlayer.play(clientNo+1); // เล่นเสียง
+
     LINE.notify(doorBell[clientNo].LineNoti);
 
-    digitalWrite(doorBell[clientNo].ledClientSignal, HIGH);
+// แสดงสัญญาณไฟ
+  if (LIGHT_SIGNAL){
+      digitalWrite(doorBell[clientNo].ledClientSignal, HIGH);    
+      delay(3000);
+      digitalWrite(doorBell[clientNo].ledClientSignal, LOW);
+  }
     
-    delay(3000);
-    digitalWrite(doorBell[clientNo].ledClientSignal, LOW);
-
     //Serial.println("Check data = Data is not NULL");
 
     return doorBell[clientNo].LineNoti;
