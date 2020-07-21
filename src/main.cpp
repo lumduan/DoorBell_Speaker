@@ -1,13 +1,6 @@
-/*ไลบรารี่ TridentTD_LineNotify version 2.1
-ใช้สำหรับ ส่ง แจ้งเตือนไปยัง LINE สำหรับ ESP8266 และ ESP32
-สามารถส่งได้ทั้ง ข้อความ , สติกเกอร์ และรูปภาพ(ด้วย url)
----------------------------------------------------- -
-ให้ save เป็น file ต่างหากก่อนถึงจะส่ง Line Notify ภาษาไทยได้
-*/
 
 #include <Arduino.h>
 #include <Wire.h>
-// #include <ESP8266WiFi.h>
 #include <TridentTD_LineNotify.h>
 #include <SoftwareSerial.h>
 #include <DFRobotDFPlayerMini.h>
@@ -22,6 +15,8 @@ WiFiServer server(port);
 
 // กำหนดข้อมูลเกี่ยวกับ Line
 #define LINE_TOKEN "p5i3cA07rUkisAioIR5knfSaHoYMOIyyIVUjAGGRJ9v" 
+
+bool LINE_SEND = false; // ต้องการให้ส่งข้อมูลผ่านทาง Line หรือไม่
 
 HardwareSerial mySoftwareSerial(1);
 
@@ -55,14 +50,16 @@ void setup() {
 
   Serial.begin(115200); 
 
-  Serial.println(F("Initializing DFPlayer ..."));
+  Serial.println("Initializing DFPlayer ...");
 
-    if (!myDFPlayer.begin(mySoftwareSerial)) {  //ตรวจสอบกับการเชื่อมต่อกับ dfPlayer 
-      Serial.println("Unable to begin:");
-      Serial.println("1.Please recheck the connection!");
-      Serial.println("2.Please insert the SD card!");
-    while(true);
-  }
+  myDFPlayer.begin(mySoftwareSerial);
+
+  //   if (!myDFPlayer.begin(mySoftwareSerial)) {  //ตรวจสอบกับการเชื่อมต่อกับ dfPlayer 
+  //     Serial.println("Unable to begin:");
+  //     Serial.println("1.Please recheck the connection!");
+  //     Serial.println("2.Please insert the SD card!");
+  //   while(true);
+  // }
 
   Serial.println("DFPlayer Mini online.");
 
@@ -75,8 +72,6 @@ void setup() {
   Serial.println(myDFPlayer.readVolume()); //read current volume
   Serial.println(myDFPlayer.readEQ()); //read EQ setting
   Serial.println(myDFPlayer.readFileCounts()); //read all file counts in SD card
-
-
 
   // กำหนด Line Token
   LINE.setToken(LINE_TOKEN); 
@@ -147,7 +142,6 @@ void loop() {
         while (Serial.available() > 0) client.write(Serial.read());
 
     }
-  
 
     client.stop();
     Serial.println("Client disconnected");
@@ -164,8 +158,8 @@ String sentNoti_ledShow(int clientNo){
 
     myDFPlayer.play(clientNo+1); // เล่นเสียง
 
-    LINE.notify(doorBell[clientNo].LineNoti);
-
+    if(LINE_SEND) LINE.notify(doorBell[clientNo].LineNoti); // ส่งข้อมูลผ่านทาง LINE
+    
 // แสดงสัญญาณไฟ
   if (LIGHT_SIGNAL){
       digitalWrite(doorBell[clientNo].ledClientSignal, HIGH);    
