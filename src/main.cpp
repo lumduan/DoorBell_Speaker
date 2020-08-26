@@ -1,11 +1,10 @@
-
 #include <Arduino.h>
 #include <Wire.h>
 #include <TridentTD_LineNotify.h>
 #include <SoftwareSerial.h>
 #include <DFRobotDFPlayerMini.h>
 
-// SSID และ Password ของ Wifi ให้ ESP8266 ได้เชื่อมต่อ
+// SSID และ Password ของ Wifi ให้ ESP32 ได้เชื่อมต่อ
 #define SSID "IOT" 
 #define PASSWORD "abac3782133" 
 
@@ -13,16 +12,16 @@
 const int port = 8888;
 WiFiServer server(port);
 
-// กำหนดข้อมูลเกี่ยวกับ Line
-#define LINE_TOKEN "p5i3cA07rUkisAioIR5knfSaHoYMOIyyIVUjAGGRJ9v" 
-
+// Line Token เพื่ือให้ส่งข้อมูลผ่านทาง Line Notify
+#define LINE_TOKEN "Fu9f2NBx4G4hoyfxu4vReikryVZtEyTY10Ei9JFuTpW" 
 bool LINE_SEND = false; // ต้องการให้ส่งข้อมูลผ่านทาง Line หรือไม่
 
-HardwareSerial mySoftwareSerial(1);
-
-//SoftwareSerial mySoftwareSerial(16, 17); // RX, TX ใช้รับส่งข้อมูล (bit) กับ dfplayermini
+HardwareSerial mySoftwareSerial(1); // สร้างการเชื่อมต่อไปยัง DfPlayer
 
 DFRobotDFPlayerMini myDFPlayer;
+
+
+// FUNCTIONS
 
 void printDetail(uint8_t type, int value); //ฟังก์ชั่น รับ Status ของ dfplayermini
 
@@ -44,6 +43,10 @@ wifiClient doorBell[] = {  // ขาของ ESP8266 ที่จะให้�
                           {25,"มีผู้มาพบประตูหลังบ้าน"}     // 2 ประตูหลัง
 };
 
+// END OF FUNCTIONS
+
+
+
 void setup() {
 
   mySoftwareSerial.begin(9600, SERIAL_8N1, 16, 17);  // สร้าง Serial สำหรับติดต่อกับ dfPlayer RX, TX 
@@ -54,17 +57,17 @@ void setup() {
 
   myDFPlayer.begin(mySoftwareSerial);
 
-  //   if (!myDFPlayer.begin(mySoftwareSerial)) {  //ตรวจสอบกับการเชื่อมต่อกับ dfPlayer 
-  //     Serial.println("Unable to begin:");
-  //     Serial.println("1.Please recheck the connection!");
-  //     Serial.println("2.Please insert the SD card!");
-  //   while(true);
-  // }
+    if (!myDFPlayer.begin(mySoftwareSerial)) {  //ตรวจสอบกับการเชื่อมต่อกับ dfPlayer 
+      Serial.println("Unable to begin:");
+      Serial.println("1.Please recheck the connection!");
+      Serial.println("2.Please insert the SD card!");
+    while(true);
+  }
 
   Serial.println("DFPlayer Mini online.");
 
   myDFPlayer.setTimeOut(500); //Set serial communictaion time out 500ms
-  myDFPlayer.volume(30);
+  myDFPlayer.volume(28);
   myDFPlayer.EQ(DFPLAYER_EQ_NORMAL);
   myDFPlayer.outputDevice(DFPLAYER_DEVICE_SD);
 
