@@ -8,31 +8,23 @@
 #define SSID "IOT" 
 #define PASSWORD "abac3782133" 
 
-// กำหนด Port สำหรับสร้าง Server
+// กำหนด Port ของ Speaker ซึ่งเป็น Server ในการติดต่อกับ Client
 const int port = 8888;
 WiFiServer server(port);
 
 // Line Token เพื่ือให้ส่งข้อมูลผ่านทาง Line Notify
 #define LINE_TOKEN "Fu9f2NBx4G4hoyfxu4vReikryVZtEyTY10Ei9JFuTpW" 
-bool LINE_SEND = false; // ต้องการให้ส่งข้อมูลผ่านทาง Line หรือไม่
+bool LINE_SEND = false; // ต้องการให้ส่งข้อมูลผ่านทาง Line Notification หรือไม่ true or false ถ้าจะให้ Speaker ทำหน้าที่ส่งด้วย ให้ค่าเป็น true
 
-HardwareSerial mySoftwareSerial(1); // สร้างการเชื่อมต่อไปยัง DfPlayer
+bool LIGHT_SIGNAL = false; // จะให้แสดงไฟบอกสถานะของ Client (ตอนนี้ยังไม่ได้ใช้งาน Function นี้)
+HardwareSerial mySoftwareSerial(1); // สร้างการเชื่อมต่อแบบ Serial ไปยัง DfPlayer
 
-DFRobotDFPlayerMini myDFPlayer;
+DFRobotDFPlayerMini myDFPlayer; 
 
-
-// FUNCTIONS
-
-void printDetail(uint8_t type, int value); //ฟังก์ชั่น รับ Status ของ dfplayermini
-
-String sentNoti_ledShow(int clientNo); // ฟังก์ชั่น รับข้อมูลว่า Client ตัวไหนส่งมา เพื่อแจ้งเตือนทาง line และ เปิด LED
-
-bool LIGHT_SIGNAL = false; // จะให้แสดงไฟสถานะของกริ่งประตูหรือไม่
-
-//สร้าง stuct ไว้เก็บข้อมูล client โดย มีตัวแปรขาบนบอร์ด และ ข้อความที่จะให้ส่งผ่านไลน์
+//สร้าง stuct ไว้เก็บข้อมูล client โดย มีตัว ขาบนบอร์ด และ ข้อความที่จะให้ส่งผ่านไลน์ 
 struct wifiClient
 {
- int ledClientSignal; // ขาที่จำให้ทำงาน
+ int ledClientSignal; // ขาที่จะส่งสัญญาณให้ LED ทำงาน
  String LineNoti; // ข้อความที่ต้องการให้ส่งผ่าน line
 };
 
@@ -43,9 +35,9 @@ wifiClient doorBell[] = {  // ขาของ ESP8266 ที่จะให้�
                           {25,"มีผู้มาพบประตูหลังบ้าน"}     // 2 ประตูหลัง
 };
 
-// END OF FUNCTIONS
+void printDetail(uint8_t type, int value); //ฟังก์ชั่น รับ Status ของ dfplayermini
 
-
+String sentNoti_ledShow(int clientNo); // ฟังก์ชั่น รับข้อมูลว่า Client ตัวไหนส่งมา เพื่อแจ้งเตือนทาง line และ เปิด LED (ยังไม่ได้ใช้ตอนนี้ทำเผื่อไว้ก่อน)
 
 void setup() {
 
@@ -57,17 +49,18 @@ void setup() {
 
   myDFPlayer.begin(mySoftwareSerial);
 
-    if (!myDFPlayer.begin(mySoftwareSerial)) {  //ตรวจสอบกับการเชื่อมต่อกับ dfPlayer 
-      Serial.println("Unable to begin:");
-      Serial.println("1.Please recheck the connection!");
-      Serial.println("2.Please insert the SD card!");
-    while(true);
-  }
+  //   if (!myDFPlayer.begin(mySoftwareSerial)) {  //ตรวจสอบกับการเชื่อมต่อกับ dfPlayer 
+  //     Serial.println("Unable to begin:");
+  //     Serial.println("1.Please recheck the connection!");
+  //     Serial.println("2.Please insert the SD card!");
+  //   while(true);
+  // }
 
-  Serial.println("DFPlayer Mini online.");
+  // Serial.println("DFPlayer Mini online.");
+
+  myDFPlayer.volume(28); // ปรับความดังของเสียง 1 ถึง 30
 
   myDFPlayer.setTimeOut(500); //Set serial communictaion time out 500ms
-  myDFPlayer.volume(28);
   myDFPlayer.EQ(DFPLAYER_EQ_NORMAL);
   myDFPlayer.outputDevice(DFPLAYER_DEVICE_SD);
 
@@ -82,7 +75,7 @@ void setup() {
   // ตั้งค่า LED PIN
   pinMode(LED_BUILTIN, OUTPUT);
   
-  // Loop เพื่อตั้งค่าไฟ LED แสดงสถานะ กริ่งประตูแต่ละจุด
+  // Loop เพื่อตั้งค่าไฟ LED แสดงสถานะ Client ประตูแต่ละจุด
   for(int i = 0; i<sizeof(doorBell)/sizeof(doorBell[0]); i++) { // Loop จนเท่าจำนวน Array ของ ledClientSignal
     pinMode(doorBell[i].ledClientSignal, OUTPUT); // Loop เพื่อตั้งค่า PIN ของ ประตู
     digitalWrite(doorBell[i].ledClientSignal, LOW); // เปิดไฟ Led บนบอร์ดค้างแสดงสถานะ รอการเชื่อมต่อ
@@ -95,6 +88,8 @@ void setup() {
   
   WiFi.mode(WIFI_STA);
   WiFi.begin(SSID, PASSWORD);
+
+  // ตรวจดูสถานะการเชื่อมต่อ Wifi ผ่าน Serial Monitor
   Serial.printf("WiFi connecting to %s\n", SSID);
   
   while (WiFi.status() != WL_CONNECTED) {
@@ -107,12 +102,12 @@ void setup() {
 
   // สร้าง Server 
   server.begin();
-  Serial.print("Open Server and Connect to IP : ");
+
+  Serial.print("Open Server : ");
   Serial.print(WiFi.localIP());
   Serial.print("  Port : ");
   Serial.println(port);
 
- // digitalWrite(LED_BUILTIN, LOW); // เปิดไฟ Led บนบอร์ดค้างแสดงสถานะ รอการเชื่อมต่อ
 
 }
 
@@ -132,7 +127,7 @@ void loop() {
       // เอาไว้รวมข้อมูลที่ส่งมาทีละ Byte
       String message = ""; 
         
-        // อ่านข้อมูลที่ส่งมา จะหมด ทีละ Byte
+        // อ่านข้อมูลที่ส่งมา จนหมด
         while (client.available()) { 
           char ch = client.read(); // รับข้อมูลทีละ Byte
           if (ch != '\r' || ch != '\n') message += ch; //ถ้า ข้อความที่รับมาไม่ใช่ ต่าขึ้นบรรทัดใหม่ หรือ Return ให้จัดเก็บลง Message
@@ -148,11 +143,14 @@ void loop() {
 
     client.stop();
     Serial.println("Client disconnected");
-    // digitalWrite(LED_BUILTIN, LOW);
+    
 
   }
 }
-// ************************************************************************************
+
+
+
+// FUNCTIONS
 
 // ฟังก์ชั่น รับข้อมูลว่า Client ตัวไหนส่งมา เพื่อแจ้งเตือนทาง line และ เปิด LED และเล่นเสียง
 String sentNoti_ledShow(int clientNo){
@@ -161,7 +159,7 @@ String sentNoti_ledShow(int clientNo){
 
     myDFPlayer.play(clientNo+1); // เล่นเสียง
 
-    if(LINE_SEND) LINE.notify(doorBell[clientNo].LineNoti); // ส่งข้อมูลผ่านทาง LINE
+    if(LINE_SEND) LINE.notify(doorBell[clientNo].LineNoti); // ส่งข้อมูลผ่านทาง LINE Y/N
     
 // แสดงสัญญาณไฟ
   if (LIGHT_SIGNAL){
@@ -170,12 +168,10 @@ String sentNoti_ledShow(int clientNo){
       digitalWrite(doorBell[clientNo].ledClientSignal, LOW);
   }
     
-    //Serial.println("Check data = Data is not NULL");
-
     return doorBell[clientNo].LineNoti;
 
   } 
-  // Serial.println("Check data = Data is  NULL");
+  
 
 }
 
