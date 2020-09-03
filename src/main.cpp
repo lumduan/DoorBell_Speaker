@@ -5,15 +5,15 @@
 #include <DFRobotDFPlayerMini.h>
 
 // SSID และ Password ของ Wifi ให้ ESP32 ได้เชื่อมต่อ
-#define SSID "IOT" 
-#define PASSWORD "abac3782133" 
+#define SSID "SSID" 
+#define PASSWORD "PASSWORD" 
 
 // กำหนด Port ของ Speaker ซึ่งเป็น Server ในการติดต่อกับ Client
 const int port = 8888;
 WiFiServer server(port);
 
 // Line Token เพื่ือให้ส่งข้อมูลผ่านทาง Line Notify
-#define LINE_TOKEN "Fu9f2NBx4G4hoyfxu4vReikryVZtEyTY10Ei9JFuTpW" 
+#define LINE_TOKEN "LINE_TOKEN" 
 bool LINE_SEND = false; // ต้องการให้ส่งข้อมูลผ่านทาง Line Notification หรือไม่ true or false ถ้าจะให้ Speaker ทำหน้าที่ส่งด้วย ให้ค่าเป็น true
 
 bool LIGHT_SIGNAL = false; // จะให้แสดงไฟบอกสถานะของ Client (ตอนนี้ยังไม่ได้ใช้งาน Function นี้)
@@ -48,15 +48,6 @@ void setup() {
   Serial.println("Initializing DFPlayer ...");
 
   myDFPlayer.begin(mySoftwareSerial);
-
-  //   if (!myDFPlayer.begin(mySoftwareSerial)) {  //ตรวจสอบกับการเชื่อมต่อกับ dfPlayer 
-  //     Serial.println("Unable to begin:");
-  //     Serial.println("1.Please recheck the connection!");
-  //     Serial.println("2.Please insert the SD card!");
-  //   while(true);
-  // }
-
-  // Serial.println("DFPlayer Mini online.");
 
   myDFPlayer.volume(28); // ปรับความดังของเสียง 1 ถึง 30
 
@@ -107,8 +98,6 @@ void setup() {
   Serial.print(WiFi.localIP());
   Serial.print("  Port : ");
   Serial.println(port);
-
-
 }
 
 
@@ -148,8 +137,6 @@ void loop() {
   }
 }
 
-
-
 // FUNCTIONS
 
 // ฟังก์ชั่น รับข้อมูลว่า Client ตัวไหนส่งมา เพื่อแจ้งเตือนทาง line และ เปิด LED และเล่นเสียง
@@ -171,7 +158,6 @@ String sentNoti_ledShow(int clientNo){
     return doorBell[clientNo].LineNoti;
 
   } 
-  
 
 }
 
